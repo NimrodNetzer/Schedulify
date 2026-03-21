@@ -178,6 +178,36 @@ void* Model::executeOperation(ModelOperation operation, const void* data, const 
                     return nullptr;
                 }
             }
+
+            case ModelOperation::GET_SETTING: {
+                if (data) {
+                    const auto* req = static_cast<const SettingRequest*>(data);
+                    auto& dbIntegration = ModelDatabaseIntegration::getInstance();
+                    if (!dbIntegration.isInitialized()) dbIntegration.initializeDatabase();
+                    auto& db = DatabaseManager::getInstance();
+                    if (db.isConnected()) {
+                        auto* result = new string(db.getMetadata(req->key, req->value));
+                        return result;
+                    }
+                }
+                return nullptr;
+            }
+
+            case ModelOperation::SET_SETTING: {
+                if (data) {
+                    const auto* req = static_cast<const SettingRequest*>(data);
+                    auto& dbIntegration = ModelDatabaseIntegration::getInstance();
+                    if (!dbIntegration.isInitialized()) dbIntegration.initializeDatabase();
+                    auto& db = DatabaseManager::getInstance();
+                    if (db.isConnected()) {
+                        bool ok = db.updateMetadata(req->key, req->value);
+                        if (!ok) ok = db.insertMetadata(req->key, req->value, "user setting");
+                        auto* result = new bool(ok);
+                        return result;
+                    }
+                }
+                return nullptr;
+            }
         }
     } catch (const std::exception& e) {
         Logger::get().logError("Exception in executeOperation: " + std::string(e.what()));

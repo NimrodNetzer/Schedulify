@@ -6,6 +6,7 @@
         <file>schedules_display.qml</file>
         <file>log_display.qml</file>
         <file>loading_overlay.qml</file>
+        <file>settings.qml</file>
         <file>popups/ExportMenu.qml</file>
         <file>popups/SchedBot.qml</file>
         <file>popups/AddCoursePopup.qml</file>
@@ -21,5 +22,6 @@
         <file>icons/ic-valid.svg</file>
         <file>icons/ic-warning.svg</file>
         <file>icons/ic-assistant.svg</file>
+        <file alias="sample_courses.txt">../data/V1.0CourseDB.txt</file>
     </qresource>
 </RCC>

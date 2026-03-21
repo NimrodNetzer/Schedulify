@@ -103,6 +103,8 @@ set(PROJECT_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/controller/src/course_selection.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/controller/src/schedules_display.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/controller/src/log_display.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/controller/include/settings_controller.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/controller/src/settings_controller.cpp
 
         ${CMAKE_CURRENT_SOURCE_DIR}/logger/logger.cpp
 

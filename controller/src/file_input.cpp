@@ -275,6 +275,46 @@ int FileInputController::selectedFileCount() const {
     return static_cast<int>(m_selectedFileIds.size());
 }
 
+void FileInputController::loadSampleData() {
+    Logger::get().logInfo("Loading bundled sample course data");
+
+    // Copy the Qt resource to a temp file so the model can read it as a real path
+    QString tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation)
+                       + "/schedulify_sample_courses.txt";
+
+    QFile::remove(tempPath); // remove stale copy if present (no-op if absent)
+
+    if (!QFile::copy(":/sample_courses.txt", tempPath)) {
+        Logger::get().logError("Failed to extract sample course file from resources");
+        emit errorMessage("Could not load sample data. Please try uploading a course file instead.");
+        return;
+    }
+
+    // Make the temp file writable (Qt resources are read-only by default)
+    QFile::setPermissions(tempPath, QFile::ReadOwner | QFile::WriteOwner | QFile::ReadUser | QFile::WriteUser);
+
+    string filePath = tempPath.toUtf8().constData();
+
+    auto* coursesPtr = static_cast<vector<Course>*>(
+            modelConnection->executeOperation(ModelOperation::GENERATE_COURSES, nullptr, filePath)
+    );
+
+    if (!coursesPtr || coursesPtr->empty()) {
+        Logger::get().logError("Failed to load sample courses");
+        emit errorMessage("Could not parse the sample course data. Please try uploading your own file.");
+        delete coursesPtr;
+        return;
+    }
+
+    vector<Course> courses = *coursesPtr;
+    delete coursesPtr;
+
+    Logger::get().logInfo("Loaded " + std::to_string(courses.size()) + " sample courses");
+
+    refreshFileHistory();
+    proceedWithCourses(courses);
+}
+
 void FileInputController::validateFileSelection() {
     // Check if selected file IDs actually exist in the model
     for (int fileId : m_selectedFileIds) {

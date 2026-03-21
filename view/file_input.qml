@@ -40,6 +40,26 @@ Page {
         }
     }
 
+    // Settings dialog loader
+    Loader {
+        id: settingsLoader
+        source: "qrc:/settings.qml"
+        active: false  // loaded on first use
+
+        onLoaded: {
+            item.parent = inputScreen;
+            item.open();
+        }
+    }
+
+    function openSettings() {
+        if (settingsLoader.active && settingsLoader.item) {
+            settingsLoader.item.open();
+        } else {
+            settingsLoader.active = true; // triggers onLoaded which calls open()
+        }
+    }
+
     property var logWindow: null
 
     Component.onDestruction: {
@@ -290,6 +310,59 @@ Page {
                                 fileInputController.refreshFileHistory();
                             }
                         }
+                    }
+                }
+
+                // Settings button
+                Button {
+                    id: settingsButton
+                    width: 40
+                    height: 40
+
+                    background: Rectangle {
+                        color: settingsMouseArea.containsMouse ? "#a8a8a8" : "#f3f4f6"
+                        radius: 10
+                    }
+
+                    contentItem: Item {
+                        anchors.fill: parent
+
+                        Image {
+                            anchors.centerIn: parent
+                            width: 22
+                            height: 22
+                            source: "qrc:/icons/ic-preference.svg"
+                            sourceSize.width: 22
+                            sourceSize.height: 22
+                        }
+
+                        ToolTip {
+                            id: settingsTooltip
+                            text: "Settings"
+                            visible: settingsMouseArea.containsMouse
+                            delay: 500
+                            timeout: 3000
+
+                            background: Rectangle {
+                                color: "#374151"
+                                radius: 4
+                                border.color: "#4b5563"
+                            }
+
+                            contentItem: Text {
+                                text: settingsTooltip.text
+                                color: "white"
+                                font.pixelSize: 12
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: settingsMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: openSettings()
                     }
                 }
 
@@ -602,6 +675,36 @@ Page {
                             font.pixelSize: 12
                             color: "#9ca3af"
                             anchors.horizontalCenter: parent.horizontalCenter
+                        }
+                    }
+                }
+
+                // Sample data link
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: 6
+
+                    Label {
+                        text: "No file yet?"
+                        color: "#9ca3af"
+                        font.pixelSize: 13
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        text: "Try with sample data →"
+                        color: "#3b82f6"
+                        font.pixelSize: 13
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (fileInputController) {
+                                    fileInputController.loadSampleData();
+                                }
+                            }
                         }
                     }
                 }

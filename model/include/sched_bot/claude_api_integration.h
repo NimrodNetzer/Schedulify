@@ -30,11 +30,13 @@ private:
     // API interaction methods
     Json::Value createRequestPayload(const BotQueryRequest& request);
     static std::string createSystemPrompt(const std::string& scheduleMetadata);
-    static BotQueryResponse parseClaudeResponse(const std::string& responseData);
+    static BotQueryResponse parseGeminiResponse(const std::string& responseData);
     static bool extractSQLQuery(const std::string& content, std::string& sqlQuery, std::vector<std::string>& parameters);
 
-    const std::string CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
-    const std::string CLAUDE_MODEL = "claude-3-5-sonnet-20241022";
+    // Gemini Flash — free tier, no credit card required
+    // Get a key at https://aistudio.google.com
+    const std::string GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
+
 };
 
 #endif // CLAUDE_API_INTEGRATION_H

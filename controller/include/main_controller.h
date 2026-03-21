@@ -6,6 +6,7 @@
 #include "course_selection.h"
 #include "schedules_display.h"
 #include "log_display.h"
+#include "settings_controller.h"
 
 #include <QObject>
 #include <QQmlApplicationEngine>
@@ -21,6 +22,7 @@ public:
     CourseSelectionController* courseSelectionController() const { return m_courseSelectionController; }
     SchedulesDisplayController* schedulesDisplayController() const { return m_schedulesDisplayController; }
     LogDisplayController* logDisplayController() const { return m_logDisplayController; }
+    SettingsController* settingsController() const { return m_settingsController; }
     QQmlApplicationEngine* getEngine() const { return m_engine; }
 
 signals:
@@ -35,6 +37,7 @@ private:
     CourseSelectionController* m_courseSelectionController;
     SchedulesDisplayController* m_schedulesDisplayController;
     LogDisplayController* m_logDisplayController;
+    SettingsController* m_settingsController;
 
     // Connect sub-controller signals to main controller signals
     void connectControllerSignals(const ControllerManager* controller) const;

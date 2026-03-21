@@ -9,6 +9,7 @@
 #include "logger.h"
 #include <QFileDialog>
 #include <QStandardPaths>
+#include <QFile>
 #include <algorithm>
 
 class FileInputController : public ControllerManager {
@@ -43,6 +44,7 @@ public:
     Q_INVOKABLE void clearFileSelection();
     Q_INVOKABLE void refreshFileHistory(); // Force refresh file history
     Q_INVOKABLE void deleteFileFromHistory(int fileId); // Delete file from history
+    Q_INVOKABLE void loadSampleData(); // Load bundled sample course file
 
 private:
     QString selectedFilePath;

@@ -7,6 +7,7 @@ MainController::MainController(QQmlApplicationEngine* engine, QObject *parent)
         , m_courseSelectionController(new CourseSelectionController(this))
         , m_schedulesDisplayController(new SchedulesDisplayController(this))
         , m_logDisplayController(new LogDisplayController(this))
+        , m_settingsController(new SettingsController(this))
 {
     // Connect sub-controller signals to main controller signals
     connectControllerSignals(m_fileInputController);
@@ -19,6 +20,7 @@ MainController::MainController(QQmlApplicationEngine* engine, QObject *parent)
     engine->rootContext()->setContextProperty("courseSelectionController", m_courseSelectionController);
     engine->rootContext()->setContextProperty("schedulesDisplayController", m_schedulesDisplayController);
     engine->rootContext()->setContextProperty("logDisplayController", m_logDisplayController);
+    engine->rootContext()->setContextProperty("settingsController", m_settingsController);
 }
 
 void MainController::connectControllerSignals(const ControllerManager* controller) const {

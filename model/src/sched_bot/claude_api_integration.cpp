@@ -42,16 +42,16 @@ BotQueryResponse ClaudeAPIClient::ActivateBot(const BotQueryRequest& request) {
              response.errorMessage.find("429") != std::string::npos ||
              response.errorMessage.find("529") != std::string::npos)) {
 
-            Logger::get().logWarning("ActivateBot: Claude API overloaded - using fallback");
+            Logger::get().logWarning("ActivateBot: Gemini API overloaded - using fallback");
             response = generateFallbackResponse(enhancedRequest);
 
             if (!response.hasError) {
-                response.userMessage = "⚠️ Claude API is currently busy, using simplified pattern matching.\n\n" + response.userMessage;
+                response.userMessage = "⚠️ Gemini API is currently busy, using simplified pattern matching.\n\n" + response.userMessage;
             }
         }
 
         if (response.hasError) {
-            Logger::get().logError("ActivateBot: Claude processing failed: " + response.errorMessage);
+            Logger::get().logError("ActivateBot: Gemini processing failed: " + response.errorMessage);
             return response;
         }
 
@@ -150,7 +150,7 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, APIRespon
 
 ClaudeAPIClient::ClaudeAPIClient() {
     curl_global_init(CURL_GLOBAL_DEFAULT);
-    Logger::get().logInfo("Claude API client initialized with enhanced error handling");
+    Logger::get().logInfo("Gemini API client initialized");
 }
 
 ClaudeAPIClient::~ClaudeAPIClient() {
@@ -160,166 +160,95 @@ ClaudeAPIClient::~ClaudeAPIClient() {
 BotQueryResponse ClaudeAPIClient::processScheduleQuery(const BotQueryRequest& request) {
     BotQueryResponse response;
 
-    const char* apiKey = getenv("ANTHROPIC_API_KEY");
-    if (!apiKey || strlen(apiKey) == 0) {
-        Logger::get().logError("ANTHROPIC_API_KEY environment variable not set");
+    // Prefer key stored via the in-app Settings UI; fall back to env variable
+    string cleanApiKey;
+    auto& db = DatabaseManager::getInstance();
+    if (db.isConnected()) {
+        string dbKey = db.getMetadata("gemini_api_key", "");
+        for (char c : dbKey) {
+            if (c >= 33 && c <= 126) cleanApiKey += c;
+        }
+    }
+    if (cleanApiKey.empty()) {
+        const char* envKey = getenv("GEMINI_API_KEY");
+        if (envKey && strlen(envKey) > 0) {
+            for (char c : string(envKey)) {
+                if (c >= 33 && c <= 126) cleanApiKey += c;
+            }
+        }
+    }
+    if (cleanApiKey.empty()) {
+        Logger::get().logError("No Gemini API key configured. Set it in Settings or GEMINI_API_KEY env var.");
         response.hasError = true;
-        response.errorMessage = "API key not configured. Please set ANTHROPIC_API_KEY environment variable.";
+        response.errorMessage = "SchedBot requires a free Gemini API key. Please configure it in Settings (⚙️).";
         return response;
     }
 
-    // Clean API key
-    string cleanApiKey;
-    for (char c : string(apiKey)) {
-        if (c >= 33 && c <= 126) {
-            cleanApiKey += c;
-        }
-    }
-
-    Logger::get().logInfo("Starting Claude API request with retry logic");
+    Logger::get().logInfo("Starting Gemini API request");
 
     try {
-        // Create the request payload
+        // Build Gemini request body
         Json::Value requestJson = createRequestPayload(request);
         Json::StreamWriterBuilder builder;
         string jsonString = Json::writeString(builder, requestJson);
 
-        Logger::get().logInfo("Request payload size: " + to_string(jsonString.length()) + " bytes");
+        string apiUrl = GEMINI_API_BASE + cleanApiKey;
 
-        // Retry logic for rate limiting and temporary failures
-        const int maxRetries = 3;
-        const vector<int> retryDelays = {2, 5, 10}; // seconds
-
-        for (int attempt = 1; attempt <= maxRetries; ++attempt) {
-            Logger::get().logInfo("API request attempt " + to_string(attempt) + "/" + to_string(maxRetries));
-
-            CURL* curl = curl_easy_init();
-            if (!curl) {
-                response.hasError = true;
-                response.errorMessage = "Failed to initialize CURL";
-                return response;
-            }
-
-            APIResponse apiResponse;
-
-            struct curl_slist* headers = nullptr;
-            headers = curl_slist_append(headers, ("x-api-key: " + cleanApiKey).c_str());
-            headers = curl_slist_append(headers, "Content-Type: application/json");
-            headers = curl_slist_append(headers, "anthropic-version: 2023-06-01");
-
-            // Add user agent for better API handling
-            headers = curl_slist_append(headers, "User-Agent: SchedGUI/1.0");
-
-            curl_easy_setopt(curl, CURLOPT_URL, CLAUDE_API_URL.c_str());
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonString.c_str());
-            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &apiResponse);
-            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);      // Increased timeout
-            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30L);
-            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
-
-            Logger::get().logInfo("Sending request to Claude API...");
-
-            CURLcode res = curl_easy_perform(curl);
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &apiResponse.response_code);
-
-            curl_slist_free_all(headers);
-            curl_easy_cleanup(curl);
-
-            Logger::get().logInfo("CURL result: " + to_string(res));
-            Logger::get().logInfo("HTTP response code: " + to_string(apiResponse.response_code));
-
-            if (res != CURLE_OK) {
-                Logger::get().logError("Network error: " + string(curl_easy_strerror(res)));
-
-                if (attempt < maxRetries) {
-                    Logger::get().logInfo("Retrying in " + to_string(retryDelays[attempt-1]) + " seconds...");
-                    this_thread::sleep_for(chrono::seconds(retryDelays[attempt-1]));
-                    continue;
-                } else {
-                    response.hasError = true;
-                    response.errorMessage = "Network error after " + to_string(maxRetries) + " attempts: " + string(curl_easy_strerror(res));
-                    return response;
-                }
-            }
-
-            // Handle different HTTP response codes
-            if (apiResponse.response_code == 200) {
-                // Success!
-                Logger::get().logInfo("Claude API request successful on attempt " + to_string(attempt));
-
-                if (apiResponse.data.empty()) {
-                    Logger::get().logError("Empty response from Claude API");
-                    response.hasError = true;
-                    response.errorMessage = "Empty response from Claude API";
-                    return response;
-                }
-
-                // Parse the response
-                response = parseClaudeResponse(apiResponse.data);
-                Logger::get().logInfo("Claude API request completed successfully");
-                return response;
-
-            } else if (apiResponse.response_code == 429 || apiResponse.response_code == 529) {
-                // Rate limiting or overloaded
-                Logger::get().logWarning("Claude API rate limited/overloaded (HTTP " + to_string(apiResponse.response_code) + ")");
-                Logger::get().logWarning("Response: " + apiResponse.data.substr(0, 200) + "...");
-
-                if (attempt < maxRetries) {
-                    int delaySeconds = retryDelays[attempt-1] * 2; // Longer delay for rate limits
-                    Logger::get().logInfo("Rate limited - retrying in " + to_string(delaySeconds) + " seconds...");
-                    this_thread::sleep_for(chrono::seconds(delaySeconds));
-                    continue;
-                } else {
-                    response.hasError = true;
-                    response.errorMessage = "Claude API is currently overloaded. Please try again in a few minutes.";
-                    return response;
-                }
-
-            } else if (apiResponse.response_code == 401) {
-                // Authentication error - don't retry
-                Logger::get().logError("Claude API authentication failed (HTTP 401)");
-                Logger::get().logError("Response: " + apiResponse.data);
-                response.hasError = true;
-                response.errorMessage = "API authentication failed. Please check your ANTHROPIC_API_KEY.";
-                return response;
-
-            } else if (apiResponse.response_code == 400) {
-                // Bad request - don't retry
-                Logger::get().logError("Claude API bad request (HTTP 400)");
-                Logger::get().logError("Response: " + apiResponse.data);
-                response.hasError = true;
-                response.errorMessage = "Invalid request sent to Claude API. Please check the query format.";
-                return response;
-
-            } else {
-                // Other HTTP errors
-                Logger::get().logError("Claude API returned HTTP " + to_string(apiResponse.response_code));
-                Logger::get().logError("Response: " + apiResponse.data.substr(0, 500) + "...");
-
-                if (attempt < maxRetries && apiResponse.response_code >= 500) {
-                    // Server errors - retry
-                    Logger::get().logInfo("Server error - retrying in " + to_string(retryDelays[attempt-1]) + " seconds...");
-                    this_thread::sleep_for(chrono::seconds(retryDelays[attempt-1]));
-                    continue;
-                } else {
-                    response.hasError = true;
-                    response.errorMessage = "Claude API request failed with HTTP " + to_string(apiResponse.response_code);
-                    return response;
-                }
-            }
+        CURL* curl = curl_easy_init();
+        if (!curl) {
+            response.hasError = true;
+            response.errorMessage = "Failed to initialize CURL";
+            return response;
         }
 
-        // If we get here, all retries failed
-        response.hasError = true;
-        response.errorMessage = "Claude API request failed after " + to_string(maxRetries) + " attempts";
-        return response;
+        APIResponse apiResponse;
+
+        struct curl_slist* headers = nullptr;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+
+        curl_easy_setopt(curl, CURLOPT_URL, apiUrl.c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonString.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &apiResponse);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15L);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+
+        CURLcode res = curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &apiResponse.response_code);
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+
+        if (res != CURLE_OK) {
+            response.hasError = true;
+            response.errorMessage = "Network error: " + string(curl_easy_strerror(res));
+            return response;
+        }
+
+        if (apiResponse.response_code == 200) {
+            response = parseGeminiResponse(apiResponse.data);
+            return response;
+        } else if (apiResponse.response_code == 429) {
+            response.hasError = true;
+            response.errorMessage = "Gemini API rate limit reached. Please wait a moment and try again.";
+            return response;
+        } else if (apiResponse.response_code == 400 || apiResponse.response_code == 403) {
+            Logger::get().logError("Gemini API auth/request error (HTTP " + to_string(apiResponse.response_code) + "): " + apiResponse.data.substr(0, 300));
+            response.hasError = true;
+            response.errorMessage = "Invalid API key. Please check your Gemini API key in Settings (⚙️).";
+            return response;
+        } else {
+            Logger::get().logError("Gemini API error HTTP " + to_string(apiResponse.response_code) + ": " + apiResponse.data.substr(0, 300));
+            response.hasError = true;
+            response.errorMessage = "Gemini API request failed (HTTP " + to_string(apiResponse.response_code) + ").";
+            return response;
+        }
 
     } catch (const exception& e) {
-        Logger::get().logError("Exception in Claude API request: " + string(e.what()));
+        Logger::get().logError("Exception in Gemini API request: " + string(e.what()));
         response.hasError = true;
         response.errorMessage = "Request processing error: " + string(e.what());
     }
@@ -330,7 +259,7 @@ BotQueryResponse ClaudeAPIClient::processScheduleQuery(const BotQueryRequest& re
 BotQueryResponse ClaudeAPIClient::generateFallbackResponse(const BotQueryRequest& request) {
     BotQueryResponse response;
 
-    Logger::get().logInfo("Generating fallback response for Claude API failure");
+    Logger::get().logInfo("Generating fallback response for Gemini API failure");
 
     string userMsg = request.userMessage;
     transform(userMsg.begin(), userMsg.end(), userMsg.begin(), ::tolower);
@@ -371,22 +300,27 @@ BotQueryResponse ClaudeAPIClient::generateFallbackResponse(const BotQueryRequest
 Json::Value ClaudeAPIClient::createRequestPayload(const BotQueryRequest& request) {
     Json::Value payload;
 
-    // Set model and parameters
-    payload["model"] = CLAUDE_MODEL;
-    payload["max_tokens"] = 1024;
-
-    // Create system prompt with schedule metadata
+    // System instruction
     string systemPrompt = createSystemPrompt(request.scheduleMetadata);
-    payload["system"] = systemPrompt;
+    Json::Value sysPart;
+    sysPart["text"] = systemPrompt;
+    Json::Value sysParts(Json::arrayValue);
+    sysParts.append(sysPart);
+    payload["system_instruction"]["parts"] = sysParts;
 
-    // Create messages array
-    Json::Value messages(Json::arrayValue);
-    Json::Value userMessage;
-    userMessage["role"] = "user";
-    userMessage["content"] = request.userMessage;
-    messages.append(userMessage);
+    // User message
+    Json::Value userPart;
+    userPart["text"] = request.userMessage;
+    Json::Value userParts(Json::arrayValue);
+    userParts.append(userPart);
+    Json::Value userContent;
+    userContent["role"] = "user";
+    userContent["parts"] = userParts;
+    Json::Value contents(Json::arrayValue);
+    contents.append(userContent);
+    payload["contents"] = contents;
 
-    payload["messages"] = messages;
+    payload["generationConfig"]["maxOutputTokens"] = 1024;
 
     return payload;
 }
@@ -529,13 +463,13 @@ CRITICAL: Always use unique_id in SELECT statements, never schedule_index!
     return prompt;
 }
 
-BotQueryResponse ClaudeAPIClient::parseClaudeResponse(const string& responseData) {
+BotQueryResponse ClaudeAPIClient::parseGeminiResponse(const string& responseData) {
     BotQueryResponse botResponse;
 
     if (responseData.empty()) {
-        Logger::get().logError("Empty response from Claude API");
+        Logger::get().logError("Empty response from Gemini API");
         botResponse.hasError = true;
-        botResponse.errorMessage = "Empty response from Claude API";
+        botResponse.errorMessage = "Empty response from Gemini API";
         return botResponse;
     }
 
@@ -544,41 +478,43 @@ BotQueryResponse ClaudeAPIClient::parseClaudeResponse(const string& responseData
         Json::Value root;
 
         if (!reader.parse(responseData, root)) {
-            Logger::get().logError("Failed to parse Claude JSON: " + reader.getFormattedErrorMessages());
+            Logger::get().logError("Failed to parse Gemini JSON: " + reader.getFormattedErrorMessages());
             botResponse.hasError = true;
-            botResponse.errorMessage = "Invalid JSON response from Claude API";
+            botResponse.errorMessage = "Invalid JSON response from Gemini API";
             return botResponse;
         }
 
         if (root.isMember("error")) {
             Json::Value error = root["error"];
             string errorMessage = error.isMember("message") ? error["message"].asString() : "Unknown error";
-            Logger::get().logError("Claude API error: " + errorMessage);
+            Logger::get().logError("Gemini API error: " + errorMessage);
             botResponse.hasError = true;
             botResponse.errorMessage = errorMessage;
             return botResponse;
         }
 
-        if (!root.isMember("content") || !root["content"].isArray() || root["content"].empty()) {
-            Logger::get().logError("Invalid content structure in Claude response");
+        // Gemini response: candidates[0].content.parts[0].text
+        if (!root.isMember("candidates") || !root["candidates"].isArray() || root["candidates"].empty()) {
+            Logger::get().logError("Invalid candidates structure in Gemini response");
             botResponse.hasError = true;
-            botResponse.errorMessage = "Invalid response format from Claude API";
+            botResponse.errorMessage = "Invalid response format from Gemini API";
             return botResponse;
         }
 
-        Json::Value firstContent = root["content"][0];
-        if (!firstContent.isMember("text")) {
-            Logger::get().logError("No text content in Claude response");
+        Json::Value candidate = root["candidates"][0];
+        if (!candidate.isMember("content") || !candidate["content"].isMember("parts") ||
+            !candidate["content"]["parts"].isArray() || candidate["content"]["parts"].empty()) {
+            Logger::get().logError("No content parts in Gemini response");
             botResponse.hasError = true;
-            botResponse.errorMessage = "No text content in Claude API response";
+            botResponse.errorMessage = "No text content in Gemini API response";
             return botResponse;
         }
 
-        string contentText = firstContent["text"].asString();
+        string contentText = candidate["content"]["parts"][0]["text"].asString();
         if (contentText.empty()) {
-            Logger::get().logError("Empty text content from Claude");
+            Logger::get().logError("Empty text content from Gemini");
             botResponse.hasError = true;
-            botResponse.errorMessage = "Empty text content from Claude API";
+            botResponse.errorMessage = "Empty text content from Gemini API";
             return botResponse;
         }
 
@@ -629,16 +565,16 @@ BotQueryResponse ClaudeAPIClient::parseClaudeResponse(const string& responseData
         }
 
         if (botResponse.userMessage.empty()) {
-            Logger::get().logError("Empty message extracted from Claude response");
+            Logger::get().logError("Empty message extracted from Gemini response");
             botResponse.hasError = true;
-            botResponse.errorMessage = "Empty message extracted from Claude response";
+            botResponse.errorMessage = "Empty message extracted from Gemini response";
             return botResponse;
         }
 
     } catch (const exception& e) {
-        Logger::get().logError("Exception parsing Claude response: " + string(e.what()));
+        Logger::get().logError("Exception parsing Gemini response: " + string(e.what()));
         botResponse.hasError = true;
-        botResponse.errorMessage = "Failed to parse Claude response: " + string(e.what());
+        botResponse.errorMessage = "Failed to parse Gemini response: " + string(e.what());
     }
 
     return botResponse;

@@ -221,6 +221,16 @@ struct IndexConversionRequest {
 };
 
 
+// Settings struct
+
+struct SettingRequest {
+    string key;
+    string value;  // used for SET_SETTING; ignored for GET_SETTING
+
+    SettingRequest() = default;
+    SettingRequest(string k, string v = "") : key(std::move(k)), value(std::move(v)) {}
+};
+
 // Main model menu
 
 enum class ModelOperation {
@@ -237,7 +247,9 @@ enum class ModelOperation {
     DELETE_FILE_FROM_HISTORY,
     CLEAN_SCHEDULES,
     CONVERT_UNIQUE_IDS_TO_INDICES,
-    CONVERT_INDICES_TO_UNIQUE_IDS
+    CONVERT_INDICES_TO_UNIQUE_IDS,
+    GET_SETTING,
+    SET_SETTING
 };
 
 class IModel {
