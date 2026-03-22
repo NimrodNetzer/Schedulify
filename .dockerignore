@@ -1,0 +1,8 @@
+build/
+web/node_modules/
+web/dist/
+*.user
+*.suo
+.vs/
+.vscode/
+.git/

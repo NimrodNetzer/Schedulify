@@ -31,6 +31,7 @@ private:
     bool createFileTable();
     bool createCourseTable();
     bool createScheduleTable();
+    bool createUniversityProfilesTable();
 
     // Index creation methods
     bool createFileIndexes();

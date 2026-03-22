@@ -1,5 +1,10 @@
 #include "printSchedule.h"
 
+#ifdef SCHEDULIFY_SERVER_BUILD
+bool printSelectedSchedule(const InformativeSchedule&) {
+    return false; // printing not supported in server build
+}
+#else
 bool printSelectedSchedule(const InformativeSchedule& schedule) {
     QPrinter printer;
     printer.setPageSize(QPageSize(QPageSize::A4));
@@ -86,3 +91,4 @@ bool printSelectedSchedule(const InformativeSchedule& schedule) {
         return false;
     }
 }
+#endif

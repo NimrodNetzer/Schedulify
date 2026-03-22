@@ -2,6 +2,7 @@
 #define DATABASE_MANAGER_H
 
 #include "db_entities.h"
+#include "model_interfaces.h"
 #include "db_schema.h"
 #include "db_files.h"
 #include "db_courses.h"
@@ -46,6 +47,12 @@ public:
     vector<MetadataEntity> getAllMetadata();
 
     bool clearAllData();
+
+    // University profiles
+    bool saveUniversityProfile(const std::string& name, const std::string& mappingJson);
+    bool deleteUniversityProfile(int id);
+    std::vector<UniversityProfile> listUniversityProfiles();
+    UniversityProfile getUniversityProfile(int id);
 
     bool beginTransaction();
     bool commitTransaction();

@@ -1,6 +1,8 @@
 #include "logger.h"
+#ifndef SCHEDULIFY_SERVER_BUILD
 #include <QApplication>
 #include <QMessageBox>
+#endif
 
 Logger::Logger() : QObject(nullptr) {}
 
@@ -61,6 +63,9 @@ const vector<LogEntry>& Logger::getLogs() const {
 }
 
 bool Logger::downloadLogs() {
+#ifdef SCHEDULIFY_SERVER_BUILD
+    return false; // not supported in server build
+#else
     try {
         // Get default download path
         QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
@@ -126,6 +131,7 @@ bool Logger::downloadLogs() {
         emit downloadFailed(QString("Error saving logs: %1").arg(e.what()));
         return false;
     }
+#endif
 }
 
 string Logger::getTimeStamp() {

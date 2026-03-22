@@ -279,6 +279,67 @@ void DatabaseTransaction::rollback() {
     rolledBack = true;
 }
 
+bool DatabaseManager::saveUniversityProfile(const std::string& name, const std::string& mappingJson) {
+    if (!isConnected()) return false;
+    QSqlQuery q(db);
+    q.prepare(R"(
+        INSERT INTO university_profiles (name, mapping_json, updated_at)
+        VALUES (:name, :mapping, CURRENT_TIMESTAMP)
+        ON CONFLICT(name) DO UPDATE SET mapping_json=excluded.mapping_json, updated_at=CURRENT_TIMESTAMP
+    )");
+    q.bindValue(":name",    QString::fromStdString(name));
+    q.bindValue(":mapping", QString::fromStdString(mappingJson));
+    if (!q.exec()) {
+        Logger::get().logError("saveUniversityProfile failed: " + q.lastError().text().toStdString());
+        return false;
+    }
+    return true;
+}
+
+bool DatabaseManager::deleteUniversityProfile(int id) {
+    if (!isConnected()) return false;
+    QSqlQuery q(db);
+    q.prepare("DELETE FROM university_profiles WHERE id = :id");
+    q.bindValue(":id", id);
+    if (!q.exec()) {
+        Logger::get().logError("deleteUniversityProfile failed: " + q.lastError().text().toStdString());
+        return false;
+    }
+    return true;
+}
+
+std::vector<UniversityProfile> DatabaseManager::listUniversityProfiles() {
+    std::vector<UniversityProfile> profiles;
+    if (!isConnected()) return profiles;
+    QSqlQuery q("SELECT id, name, mapping_json, created_at, updated_at FROM university_profiles ORDER BY name", db);
+    while (q.next()) {
+        UniversityProfile p;
+        p.id          = q.value(0).toInt();
+        p.name        = q.value(1).toString().toStdString();
+        p.mappingJson = q.value(2).toString().toStdString();
+        p.createdAt   = q.value(3).toString().toStdString();
+        p.updatedAt   = q.value(4).toString().toStdString();
+        profiles.push_back(p);
+    }
+    return profiles;
+}
+
+UniversityProfile DatabaseManager::getUniversityProfile(int id) {
+    UniversityProfile p;
+    if (!isConnected()) return p;
+    QSqlQuery q(db);
+    q.prepare("SELECT id, name, mapping_json, created_at, updated_at FROM university_profiles WHERE id = :id");
+    q.bindValue(":id", id);
+    if (q.exec() && q.next()) {
+        p.id          = q.value(0).toInt();
+        p.name        = q.value(1).toString().toStdString();
+        p.mappingJson = q.value(2).toString().toStdString();
+        p.createdAt   = q.value(3).toString().toStdString();
+        p.updatedAt   = q.value(4).toString().toStdString();
+    }
+    return p;
+}
+
 bool DatabaseManager::isQtApplicationReady() {
     return QCoreApplication::instance() != nullptr;
 }
@@ -296,6 +357,13 @@ bool DatabaseManager::initializeDatabase(const QString& dbPath) {
     closeDatabase();
 
     QString databasePath = dbPath;
+    // Check for env var override first
+    if (databasePath.isEmpty()) {
+        const char* envPath = std::getenv("SCHEDULIFY_DB_PATH");
+        if (envPath && strlen(envPath) > 0) {
+            databasePath = QString::fromUtf8(envPath);
+        }
+    }
     if (databasePath.isEmpty()) {
         QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
         QDir appDir;

@@ -3,6 +3,8 @@
 
 #include "model_interfaces.h"
 #include "excel_parser.h"
+#include "universal_parser.h"
+#include "column_mapping.h"
 #include "model_access.h"
 #include "ScheduleBuilder.h"
 #include "parseCoursesToVector.h"
@@ -73,7 +75,7 @@ private:
     static vector<string> convertScheduleIndicesToUniqueIds(const vector<int>& indices, const string& semester);
 
 
-    static mutex dataAccessMutex;
+    static recursive_mutex dataAccessMutex;
     static vector<int> lastFilteredScheduleIds;
     static vector<string> lastFilteredUniqueIds;
     static vector<Course> lastGeneratedCourses;

@@ -9,7 +9,8 @@ bool DatabaseSchema::createTables() {
     return createMetadataTable() &&
            createFileTable() &&
            createCourseTable() &&
-           createScheduleTable();
+           createScheduleTable() &&
+           createUniversityProfilesTable();
 }
 
 bool DatabaseSchema::createIndexes() {
@@ -261,6 +262,27 @@ bool DatabaseSchema::createScheduleTable() {
         return false;
     }
 
+    return true;
+}
+
+bool DatabaseSchema::createUniversityProfilesTable() {
+    const QString query = R"(
+        CREATE TABLE IF NOT EXISTS university_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            mapping_json TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    )";
+
+    if (!executeQuery(query)) {
+        Logger::get().logError("Failed to create university_profiles table");
+        return false;
+    }
+
+    executeQuery("CREATE INDEX IF NOT EXISTS idx_university_profiles_name ON university_profiles(name)");
+    Logger::get().logInfo("University profiles table created successfully");
     return true;
 }
 

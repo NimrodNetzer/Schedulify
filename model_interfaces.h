@@ -231,6 +231,16 @@ struct SettingRequest {
     SettingRequest(string k, string v = "") : key(std::move(k)), value(std::move(v)) {}
 };
 
+// University profile struct (used by universal parser)
+
+struct UniversityProfile {
+    int id = 0;
+    string name;
+    string mappingJson;  // serialized ColumnMapping
+    string createdAt;
+    string updatedAt;
+};
+
 // Main model menu
 
 enum class ModelOperation {
@@ -249,7 +259,12 @@ enum class ModelOperation {
     CONVERT_UNIQUE_IDS_TO_INDICES,
     CONVERT_INDICES_TO_UNIQUE_IDS,
     GET_SETTING,
-    SET_SETTING
+    SET_SETTING,
+    PARSE_WITH_MAPPING,
+    PREVIEW_FILE,
+    LIST_UNIVERSITY_PROFILES,
+    SAVE_UNIVERSITY_PROFILE,
+    DELETE_UNIVERSITY_PROFILE
 };
 
 class IModel {

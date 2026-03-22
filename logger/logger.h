@@ -8,7 +8,9 @@
 #include <fstream>
 #include <QObject>
 #include <sstream>
+#ifndef SCHEDULIFY_SERVER_BUILD
 #include <QFileDialog>
+#endif
 #include <QStandardPaths>
 #include <QDateTime>
 

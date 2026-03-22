@@ -1,0 +1,75 @@
+# ─── Stage 1: Build C++ server ───────────────────────────────────────────────
+FROM ubuntu:22.04 AS cpp-builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    ninja-build \
+    git \
+    curl \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    # Qt6 headless (Core + Sql only — no display server needed)
+    qt6-base-dev \
+    libqt6sql6-sqlite \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY . .
+
+RUN cmake -S . -B build \
+    -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_GUI=OFF \
+    -DBUILD_SERVER=ON \
+    && cmake --build build --target SchedServer --parallel
+
+# ─── Stage 2: Build React frontend ───────────────────────────────────────────
+FROM node:20-alpine AS react-builder
+
+WORKDIR /web
+COPY web/package*.json ./
+RUN npm ci
+
+COPY web/ .
+RUN npm run build
+
+# ─── Stage 3: Runtime ────────────────────────────────────────────────────────
+FROM ubuntu:22.04 AS runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    libcurl4 \
+    libssl3 \
+    # Qt6 runtime libs
+    libqt6core6 \
+    libqt6sql6 \
+    libqt6sql6-sqlite \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy server binary
+COPY --from=cpp-builder /src/build/SchedServer ./SchedServer
+
+# Copy React build output
+COPY --from=react-builder /web/dist ./static
+
+# Copy sample data (optional — universities can mount their own)
+COPY --from=cpp-builder /src/data ./data 2>/dev/null || true
+
+RUN chmod +x ./SchedServer
+
+EXPOSE 8080
+
+ENV SCHEDULIFY_PORT=8080
+ENV SCHEDULIFY_STATIC_DIR=/app/static
+ENV SCHEDULIFY_DB_PATH=/data/schedulify.db
+
+# Ensure data volume dir exists
+RUN mkdir -p /data
+
+CMD ["./SchedServer"]

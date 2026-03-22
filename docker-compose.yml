@@ -1,0 +1,23 @@
+services:
+  schedulify:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    ports:
+      - "8080:8080"
+    volumes:
+      - schedulify_data:/data
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - SCHEDULIFY_DB_PATH=/data/schedulify.db
+      - SCHEDULIFY_PORT=8080
+      - SCHEDULIFY_STATIC_DIR=/app/static
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  schedulify_data:

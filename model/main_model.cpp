@@ -1,6 +1,6 @@
 #include "main_model.h"
 
-mutex Model::dataAccessMutex;
+recursive_mutex Model::dataAccessMutex;
 vector<int> Model::lastFilteredScheduleIds;
 vector<string> Model::lastFilteredUniqueIds;
 vector<Course> Model::lastGeneratedCourses;
@@ -10,13 +10,15 @@ map<string, vector<InformativeSchedule>> Model::semesterSchedules;
 
 // main model menu
 void* Model::executeOperation(ModelOperation operation, const void* data, const string& path) {
+    // Qt QSqlDatabase is not thread-safe — serialize all DB access
+    lock_guard<recursive_mutex> globalLock(dataAccessMutex);
     try {
         switch (operation) {
             case ModelOperation::GENERATE_COURSES: {
                 if (!path.empty()) {
                     auto* courses = new vector<Course>(generateCourses(path));
                     if (!courses->empty()) {
-                        lock_guard<mutex> lock(dataAccessMutex);
+                        lock_guard<recursive_mutex> lock(dataAccessMutex);
                         lastGeneratedCourses = *courses;
                     }
                     return courses;
@@ -32,7 +34,7 @@ void* Model::executeOperation(ModelOperation operation, const void* data, const 
                     const auto* loadData = static_cast<const FileLoadData*>(data);
                     auto* courses = new vector<Course>(loadCoursesFromHistory(loadData->fileIds));
                     if (!courses->empty()) {
-                        lock_guard<mutex> lock(dataAccessMutex);
+                        lock_guard<recursive_mutex> lock(dataAccessMutex);
                         lastGeneratedCourses = *courses;
                     }
                     return courses;
@@ -82,7 +84,7 @@ void* Model::executeOperation(ModelOperation operation, const void* data, const 
                     auto* schedules = new vector<InformativeSchedule>(generateSchedules(*courses, path));
 
                     if (!schedules->empty()) {
-                        lock_guard<mutex> lock(dataAccessMutex);
+                        lock_guard<recursive_mutex> lock(dataAccessMutex);
                         lastGeneratedSchedules = *schedules;
                         semesterSchedules[path] = *schedules;
                     }
@@ -137,7 +139,7 @@ void* Model::executeOperation(ModelOperation operation, const void* data, const 
             }
 
             case ModelOperation::GET_LAST_FILTERED_IDS: {
-                lock_guard<mutex> lock(dataAccessMutex);
+                lock_guard<recursive_mutex> lock(dataAccessMutex);
                 auto* result = new std::vector<int>(lastFilteredScheduleIds);
                 return result;
             }
@@ -152,7 +154,7 @@ void* Model::executeOperation(ModelOperation operation, const void* data, const 
             }
 
             case ModelOperation::GET_LAST_FILTERED_UNIQUE_IDS: {
-                lock_guard<mutex> lock(dataAccessMutex);
+                lock_guard<recursive_mutex> lock(dataAccessMutex);
                 auto* result = new std::vector<string>(lastFilteredUniqueIds);
                 return result;
             }
@@ -205,6 +207,58 @@ void* Model::executeOperation(ModelOperation operation, const void* data, const 
                         auto* result = new bool(ok);
                         return result;
                     }
+                }
+                return nullptr;
+            }
+
+            case ModelOperation::PARSE_WITH_MAPPING: {
+                if (data) {
+                    const auto* req = static_cast<const UniversalParseRequest*>(data);
+                    auto* courses = new vector<Course>(parseWithMapping(req->filePath, req->mapping));
+                    if (!courses->empty()) {
+                        lock_guard<recursive_mutex> lock(dataAccessMutex);
+                        lastGeneratedCourses = *courses;
+                    }
+                    return courses;
+                }
+                return nullptr;
+            }
+
+            case ModelOperation::PREVIEW_FILE: {
+                // data unused; file path in path argument
+                auto* rows = new vector<vector<string>>();
+                auto preview = previewFile(path, 6);
+                for (const auto& row : preview) {
+                    rows->push_back(row);
+                }
+                return rows;
+            }
+
+            case ModelOperation::LIST_UNIVERSITY_PROFILES: {
+                auto& db = DatabaseManager::getInstance();
+                if (!db.isConnected()) return nullptr;
+                auto* profiles = new vector<UniversityProfile>(db.listUniversityProfiles());
+                return profiles;
+            }
+
+            case ModelOperation::SAVE_UNIVERSITY_PROFILE: {
+                if (data) {
+                    const auto* profile = static_cast<const UniversityProfile*>(data);
+                    auto& db = DatabaseManager::getInstance();
+                    if (!db.isConnected()) return new bool(false);
+                    bool ok = db.saveUniversityProfile(profile->name, profile->mappingJson);
+                    return new bool(ok);
+                }
+                return nullptr;
+            }
+
+            case ModelOperation::DELETE_UNIVERSITY_PROFILE: {
+                if (data) {
+                    const int* id = static_cast<const int*>(data);
+                    auto& db = DatabaseManager::getInstance();
+                    if (!db.isConnected()) return new bool(false);
+                    bool ok = db.deleteUniversityProfile(*id);
+                    return new bool(ok);
                 }
                 return nullptr;
             }
@@ -584,7 +638,7 @@ BotQueryResponse Model::processClaudeQuery(const BotQueryRequest& request) {
 
 void Model::setLastFilteredScheduleIds(const vector<int>& ids) {
     try {
-        lock_guard<mutex> lock(dataAccessMutex);
+        lock_guard<recursive_mutex> lock(dataAccessMutex);
         lastFilteredScheduleIds = ids;
     } catch (const std::exception& e) {
         Logger::get().logError("Exception in setLastFilteredScheduleIds: " + std::string(e.what()));
@@ -593,7 +647,7 @@ void Model::setLastFilteredScheduleIds(const vector<int>& ids) {
 
 vector<int> Model::getLastFilteredScheduleIds() {
     try {
-        lock_guard<mutex> lock(dataAccessMutex);
+        lock_guard<recursive_mutex> lock(dataAccessMutex);
         return lastFilteredScheduleIds;
     } catch (const std::exception& e) {
         Logger::get().logError("Exception in getLastFilteredScheduleIds: " + std::string(e.what()));
@@ -603,7 +657,7 @@ vector<int> Model::getLastFilteredScheduleIds() {
 
 void Model::setLastFilteredUniqueIds(const vector<string>& uniqueIds) {
     try {
-        lock_guard<mutex> lock(dataAccessMutex);
+        lock_guard<recursive_mutex> lock(dataAccessMutex);
         lastFilteredUniqueIds = uniqueIds;
     } catch (const std::exception& e) {
         Logger::get().logError("Exception in setLastFilteredUniqueIds: " + std::string(e.what()));
@@ -612,7 +666,7 @@ void Model::setLastFilteredUniqueIds(const vector<string>& uniqueIds) {
 
 vector<string> Model::getLastFilteredUniqueIds() {
     try {
-        lock_guard<mutex> lock(dataAccessMutex);
+        lock_guard<recursive_mutex> lock(dataAccessMutex);
         return lastFilteredUniqueIds;
     } catch (const std::exception& e) {
         Logger::get().logError("Exception in getLastFilteredUniqueIds: " + std::string(e.what()));
