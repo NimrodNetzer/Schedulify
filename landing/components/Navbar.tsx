@@ -34,7 +34,7 @@ export default function Navbar() {
         <nav className="hidden md:flex items-center gap-6 text-sm text-[var(--color-text-muted)]">
           <a href="#features" className="hover:text-[var(--color-text-main)] transition-colors">Features</a>
           <a href="#how-it-works" className="hover:text-[var(--color-text-main)] transition-colors">How it works</a>
-          <a href="#tech" className="hover:text-[var(--color-text-main)] transition-colors">Tech</a>
+          <a href="#tech" className="hover:text-[var(--color-text-main)] transition-colors">Stack</a>
         </nav>
 
         {/* CTA */}
@@ -70,7 +70,7 @@ export default function Navbar() {
         <div className="md:hidden border-t border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-4 flex flex-col gap-4 text-sm">
           <a href="#features" onClick={() => setOpen(false)} className="text-[var(--color-text-muted)]">Features</a>
           <a href="#how-it-works" onClick={() => setOpen(false)} className="text-[var(--color-text-muted)]">How it works</a>
-          <a href="#tech" onClick={() => setOpen(false)} className="text-[var(--color-text-muted)]">Tech</a>
+          <a href="#tech" onClick={() => setOpen(false)} className="text-[var(--color-text-muted)]">Stack</a>
           <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="text-[var(--color-text-muted)]">GitHub</a>
           <a
             href="#download"

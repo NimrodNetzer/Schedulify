@@ -1,9 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Download, Github, ArrowRight } from "lucide-react";
+import { Download, Github } from "lucide-react";
 
 const GITHUB_URL = "https://github.com/Schedulify-org/Schedulify";
+
+const stats = [
+  { value: "11", label: "session types" },
+  { value: "A / B / Summer", label: "semesters" },
+  { value: "100%", label: "conflict-free" },
+];
 
 export default function Hero() {
   return (
@@ -22,23 +28,23 @@ export default function Hero() {
           </span>
 
           <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold text-[var(--color-text-main)] leading-tight mb-5">
-            Build your perfect course schedule —{" "}
-            <span className="text-[var(--color-primary)]">automatically.</span>
+            Every valid schedule,{" "}
+            <span className="text-[var(--color-primary)]">generated instantly.</span>
           </h1>
 
           <p className="text-lg text-[var(--color-text-muted)] leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
-            Upload your course list, set your time constraints, and Schedulify
-            generates every conflict-free schedule for you — instantly. Filter
-            with natural language using AI.
+            Upload your course list, block the times you can&apos;t attend, and
+            Schedulify computes every conflict-free combination in seconds. Then
+            filter results in plain English with SchedBot AI.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-8">
             <a
               href="#download"
               className="inline-flex items-center gap-2 bg-[var(--color-charcoal)] text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-[var(--color-charcoal-hover)] transition-colors w-full sm:w-auto justify-center"
             >
               <Download className="w-4 h-4" />
-              Download for Windows
+              Download Free
             </a>
             <a
               href={GITHUB_URL}
@@ -51,7 +57,26 @@ export default function Hero() {
             </a>
           </div>
 
-          <p className="mt-4 text-xs text-[var(--color-text-faint)]">
+          {/* Stats bar */}
+          <motion.div
+            className="inline-flex flex-wrap justify-center lg:justify-start gap-6"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut", delay: 0.25 }}
+          >
+            {stats.map((s, i) => (
+              <div key={i} className="flex flex-col items-center lg:items-start">
+                <span className="text-xl font-bold text-[var(--color-text-main)]">
+                  {s.value}
+                </span>
+                <span className="text-xs text-[var(--color-text-faint)]">
+                  {s.label}
+                </span>
+              </div>
+            ))}
+          </motion.div>
+
+          <p className="mt-5 text-xs text-[var(--color-text-faint)]">
             Available for Windows and macOS
           </p>
         </motion.div>
@@ -69,7 +94,9 @@ export default function Hero() {
               <div className="w-3 h-3 rounded-full bg-red-400" />
               <div className="w-3 h-3 rounded-full bg-yellow-400" />
               <div className="w-3 h-3 rounded-full bg-green-400" />
-              <span className="ml-3 text-[#9ca3af] text-xs font-medium">Schedulify — Schedule 1 of 42</span>
+              <span className="ml-3 text-[#9ca3af] text-xs font-medium">
+                Schedulify — Schedule 1 of 42
+              </span>
             </div>
 
             {/* Schedule grid */}
@@ -85,20 +112,26 @@ function ScheduleMockup() {
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu"];
   const hours = ["8:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
 
-  const blocks: { day: number; hour: number; span: number; label: string; type: string }[] = [
+  const blocks: {
+    day: number;
+    hour: number;
+    span: number;
+    label: string;
+    type: string;
+  }[] = [
     { day: 0, hour: 0, span: 2, label: "Calculus\nLecture", type: "lecture" },
     { day: 1, hour: 1, span: 2, label: "Data Structures\nLecture", type: "lecture" },
-    { day: 1, hour: 4, span: 1, label: "DS Tirgul", type: "tirgul" },
-    { day: 2, hour: 0, span: 1, label: "Calculus\nTirgul", type: "tirgul" },
+    { day: 1, hour: 4, span: 1, label: "DS Tutorial", type: "tutorial" },
+    { day: 2, hour: 0, span: 1, label: "Calculus\nTutorial", type: "tutorial" },
     { day: 2, hour: 2, span: 1, label: "Linear Algebra\nLecture", type: "lecture" },
     { day: 3, hour: 1, span: 2, label: "Algorithms\nLecture", type: "lecture" },
     { day: 3, hour: 4, span: 1, label: "Algo Lab", type: "lab" },
-    { day: 4, hour: 0, span: 2, label: "Linear Algebra\nTirgul", type: "tirgul" },
+    { day: 4, hour: 0, span: 2, label: "Linear Algebra\nTutorial", type: "tutorial" },
   ];
 
   const colors: Record<string, string> = {
     lecture: "bg-blue-100 border-blue-300 text-blue-800",
-    tirgul: "bg-green-100 border-green-300 text-green-800",
+    tutorial: "bg-green-100 border-green-300 text-green-800",
     lab: "bg-purple-100 border-purple-300 text-purple-800",
   };
 
@@ -115,7 +148,10 @@ function ScheduleMockup() {
         {/* Header row */}
         <div />
         {days.map((d) => (
-          <div key={d} className="flex items-center justify-center text-xs font-semibold text-[var(--color-text-muted)]">
+          <div
+            key={d}
+            className="flex items-center justify-center text-xs font-semibold text-[var(--color-text-muted)]"
+          >
             {d}
           </div>
         ))}
@@ -123,7 +159,10 @@ function ScheduleMockup() {
         {/* Hour labels + empty cells */}
         {hours.map((h, hi) => (
           <>
-            <div key={`h-${hi}`} className="flex items-center justify-end pr-2 text-[10px] text-[var(--color-text-faint)]">
+            <div
+              key={`h-${hi}`}
+              className="flex items-center justify-end pr-2 text-[10px] text-[var(--color-text-faint)]"
+            >
               {h}
             </div>
             {days.map((_, di) => (
@@ -135,7 +174,7 @@ function ScheduleMockup() {
           </>
         ))}
 
-        {/* Session blocks — positioned with absolute overlay trick via CSS grid */}
+        {/* Session blocks */}
         {blocks.map((b, i) => (
           <div
             key={i}

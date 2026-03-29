@@ -15,37 +15,37 @@ const features = [
     icon: Zap,
     title: "Conflict-Free Generation",
     description:
-      "Automatically generates every valid schedule combination with zero time conflicts — no manual checking required.",
+      "Computes every valid schedule combination exhaustively — zero time overlaps, guaranteed. No manual checking, no missed options.",
   },
   {
     icon: MessageSquare,
     title: "SchedBot AI Filtering",
     description:
-      "Chat with SchedBot, powered by Claude AI. Ask for schedules with no morning classes, maximum free days, or any preference you can describe.",
+      "Chat with SchedBot, powered by Gemini Flash AI. Ask for schedules with no morning classes, maximum free days, or any preference you can describe in plain English.",
   },
   {
     icon: Upload,
     title: "Flexible File Input",
     description:
-      "Upload your course list as Excel or TXT. Supports all major session types: lectures, tutorials, labs, and more.",
+      "Import your course list via Excel (.xlsx) or TXT. Supports all 11 session types: Lectures, Tutorials, Labs, Blocks, Departmental, Reinforcement, Guidance, Colloquium, Registration, Thesis, and Project.",
   },
   {
     icon: Clock,
     title: "Block Unavailable Times",
     description:
-      "Mark time slots you cannot attend — the generator respects your constraints before it even starts computing.",
+      "Mark any time slots you cannot attend before generation starts. The algorithm only ever considers schedules that fit your life.",
   },
   {
     icon: FileOutput,
-    title: "Export Anywhere",
+    title: "Print-Ready Export",
     description:
-      "Save your schedule as a PNG, export to CSV, or print it directly from the app. Your schedule, your format.",
+      "Export your final schedule to CSV for spreadsheet workflows, or print it directly from the app with a single click — clean and formatted.",
   },
   {
     icon: CalendarDays,
     title: "Multi-Semester Support",
     description:
-      "Manage Semester A, Semester B, Summer, and Yearly courses all in one session, with clean filtering between them.",
+      "Handles Semester A, Semester B, Summer, and Yearly courses in one session. Switch between semesters and filter cleanly without re-importing.",
   },
 ];
 
@@ -58,7 +58,7 @@ export default function Features() {
             Everything you need to build the right schedule
           </h2>
           <p className="text-[var(--color-text-muted)] text-lg max-w-xl mx-auto">
-            No more spreadsheets. No more conflicts.
+            No spreadsheets. No conflicts. No wasted time.
           </p>
         </div>
 

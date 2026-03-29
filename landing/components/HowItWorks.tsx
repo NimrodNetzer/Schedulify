@@ -1,25 +1,29 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Upload, SlidersHorizontal, CheckCircle } from "lucide-react";
 
 const steps = [
   {
     num: "01",
+    Icon: Upload,
     title: "Upload Your Course List",
     description:
-      "Drag and drop your Excel or TXT course file, or browse to select it. Previously uploaded files are saved for quick access.",
+      "Drop in your Excel (.xlsx) or TXT course file. Schedulify parses all session types automatically and remembers previously uploaded files for quick re-use.",
   },
   {
     num: "02",
-    title: "Select Courses & Constraints",
+    Icon: SlidersHorizontal,
+    title: "Select Courses & Block Times",
     description:
-      "Choose the courses you want, pick your preferences, and block any times you can't attend. Schedulify handles the rest.",
+      "Pick the courses you need, choose your semester, and mark any time slots you cannot attend. The generator only considers schedules that fit your constraints.",
   },
   {
     num: "03",
+    Icon: CheckCircle,
     title: "Browse, Filter & Export",
     description:
-      "Instantly browse every valid schedule. Use SchedBot to filter by natural language. Export as PNG or CSV when you're done.",
+      "Every valid schedule appears instantly. Ask SchedBot in plain English to narrow them down, then export to CSV or print your favourite — done.",
   },
 ];
 
@@ -37,33 +41,42 @@ export default function HowItWorks() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {steps.map((step, i) => (
-            <motion.div
-              key={step.num}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.1 }}
-              className="relative"
-            >
-              {/* Connector line */}
-              {i < steps.length - 1 && (
-                <div className="hidden md:block absolute top-8 left-full w-full h-px bg-[var(--color-border)] z-0 -translate-x-4" />
-              )}
+          {steps.map((step, i) => {
+            const Icon = step.Icon;
+            return (
+              <motion.div
+                key={step.num}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
+                className="relative"
+              >
+                {/* Connector line */}
+                {i < steps.length - 1 && (
+                  <div className="hidden md:block absolute top-8 left-full w-full h-px bg-[var(--color-border)] z-0 -translate-x-4" />
+                )}
 
-              <div className="relative z-10 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
-                <div className="text-5xl font-bold text-[var(--color-border)] mb-4 leading-none select-none">
-                  {step.num}
+                <div className="relative z-10 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
+                  {/* Step icon */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                      <Icon className="w-5 h-5 text-[var(--color-primary)]" />
+                    </div>
+                    <span className="text-3xl font-bold text-[var(--color-border)] leading-none select-none">
+                      {step.num}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-[var(--color-text-main)] text-lg mb-2">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
+                    {step.description}
+                  </p>
                 </div>
-                <h3 className="font-semibold text-[var(--color-text-main)] text-lg mb-2">
-                  {step.title}
-                </h3>
-                <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-                  {step.description}
-                </p>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>

@@ -20,10 +20,13 @@ export default function DownloadSection() {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to build your schedule?
+            Stop building schedules by hand.
           </h2>
-          <p className="text-[#9ca3af] text-lg mb-10">
-            Download Schedulify for free — available on Windows and macOS.
+          <p className="text-[#9ca3af] text-lg mb-3">
+            Schedulify is free, open-source, and runs entirely on your machine.
+          </p>
+          <p className="text-[#6b7280] text-sm mb-10">
+            No account. No subscription. Just download and run.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
